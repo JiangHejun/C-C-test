@@ -2,7 +2,7 @@
  * @Description: interval change time suggest is one long engine recognition time
  * @Author: Hejun Jiang
  * @Date: 2020-11-09 17:11:54
- * @LastEditTime: 2020-11-10 17:14:38
+ * @LastEditTime: 2020-11-12 16:46:03
  * @LastEditors: Hejun Jiang
  * @Version: v0.0.1
  * @Contact: jianghejun@hccl.ioa.ac.cn
@@ -20,11 +20,10 @@ template <typename In, typename Out>
 class ThreadPoolManage {
   public:
     using Engin = std::function<void(In&, Out&)>;
-    explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap,
-                              std::unordered_map<std::string, BlockingQueue<In>*> queuemap, int totalthreadnum,
+    explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap, std::unordered_map<std::string, BlockingQueue<In>*> queuemap, int totalthreadnum,
                               int changeinterval)
-        : funcThMap(functhreadmap), totalThNum(totalthreadnum), changeInterval(changeinterval) {
-        int averge = totalThNum / funcThMap.size(), dvalue = totalThNum % funcThMap.size(), th, i = 0;
+        : totalThNum(totalthreadnum), changeInterval(changeinterval), funcThMap(functhreadmap) {
+        int averge = totalThNum / funcThMap.size(), dvalue = totalThNum % funcThMap.size(), th;
         for (auto& it : funcThMap) {  // averge maybe > maxthself
             if (dvalue-- > 0)
                 th = averge + 1;
@@ -35,10 +34,10 @@ class ThreadPoolManage {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         printf("GetEnableSize: ");
         for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetEnableSize());
-        printf("\n");
-        printf("GetWorkingSize: ");
-        for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetWorkingSize());
         printf("\n\n");
+        // printf("GetWorkingSize: ");
+        // for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetWorkingSize());
+        // printf("\n\n");
 
         ch = new std::thread(&ThreadPoolManage::change, this);
     }
@@ -61,10 +60,10 @@ class ThreadPoolManage {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             printf("GetEnableSize: ");
             for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetEnableSize());
-            printf("\n");
-            printf("GetWorkingSize: ");
-            for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetWorkingSize());
             printf("\n\n");
+            // printf("GetWorkingSize: ");
+            // for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetWorkingSize());
+            // printf("\n\n");
         }
     }
 
@@ -96,17 +95,14 @@ class ThreadPoolManage {
             done[maxit.first] = INT64_MIN;
             done[minit.first] = INT64_MIN;
             reverseDone.push_back(std::make_pair(maxit.first, minit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(),
-                   reverseDone[reverseDone.size() - 1].second);
+            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
             reverseDone.push_back(std::make_pair(minit.first, maxit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(),
-                   reverseDone[reverseDone.size() - 1].second);
+            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
         }
         printf("\n");
 
         // now done reverse sorted: kw[64062], sid[63185], lid[52307], bamp[17250],
-        std::sort(reverseDone.begin(), reverseDone.end(),
-                  std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1, std::placeholders::_2));  // min-->max
+        std::sort(reverseDone.begin(), reverseDone.end(), std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1, std::placeholders::_2));  // min-->max
         printf("now done reverse sorted: ");
         for (auto& d : reverseDone) printf("%s[%lld], ", d.first.c_str(), d.second);
         printf("\n");
@@ -147,8 +143,7 @@ class ThreadPoolManage {
         }
         for (auto& it : threads) {
             if (it.second < funcThMap[it.first].second && overflow > 0) {
-                int v = funcThMap[it.first].second - it.second > overflow ? overflow
-                                                                          : funcThMap[it.first].second - it.second;
+                int v = funcThMap[it.first].second - it.second > overflow ? overflow : funcThMap[it.first].second - it.second;
                 it.second += v;
                 overflow -= v;
             }
