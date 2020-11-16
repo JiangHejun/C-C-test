@@ -11,17 +11,20 @@
 
 #ifndef __THREAD_POOL_MANAGE_H__
 #define __THREAD_POOL_MANAGE_H__
+#include <limits.h>
+
 #include <algorithm>
 #include <string>
 
 #include "ThreadPool.h"
 
-template <typename In, typename Out>
+template <typename In>
 class ThreadPoolManage {
-  public:
-    using Engin = std::function<void(In&, Out&)>;
-    explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap, std::unordered_map<std::string, BlockingQueue<In>*> queuemap, int totalthreadnum,
-                              int changeinterval)
+   public:
+    using Engin = std::function<void(In&, int&, std::string&)>;
+    explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap,
+                              std::unordered_map<std::string, BlockingQueue<In>*> queuemap,
+                              int totalthreadnum, int changeinterval)
         : totalThNum(totalthreadnum), changeInterval(changeinterval), funcThMap(functhreadmap) {
         int averge = totalThNum / funcThMap.size(), dvalue = totalThNum % funcThMap.size(), th;
         for (auto& it : funcThMap) {  // averge maybe > maxthself
@@ -29,7 +32,8 @@ class ThreadPoolManage {
                 th = averge + 1;
             else
                 th = averge;
-            funcMap[it.first] = new ThreadPool<In, Out>(th, it.second.second, it.second.first, queuemap[it.first]);
+            funcMap[it.first] =
+                new ThreadPool<In>(th, it.second.second, it.second.first, queuemap[it.first], it.first);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         printf("GetEnableSize: ");
@@ -47,11 +51,11 @@ class ThreadPoolManage {
         delete ch;
     }
 
-  private:
+   private:
     int totalThNum, changeInterval;
     std::thread* ch;
     std::unordered_map<std::string, std::pair<Engin, int>> funcThMap;
-    std::unordered_map<std::string, ThreadPool<In, Out>*> funcMap;
+    std::unordered_map<std::string, ThreadPool<In>*> funcMap;
 
     void change() {
         while (true) {
@@ -67,8 +71,10 @@ class ThreadPoolManage {
         }
     }
 
-  private:
-    bool cmp(std::pair<std::string, long long> x, std::pair<std::string, long long> y) { return x.second > y.second; }
+   private:
+    bool cmp(std::pair<std::string, long long> x, std::pair<std::string, long long> y) {
+        return x.second > y.second;
+    }
 
     void ReverseThread() {
         // now done: kw[17250], sid[52307], lid[63185], bamp[64062],
@@ -95,14 +101,22 @@ class ThreadPoolManage {
             done[maxit.first] = INT64_MIN;
             done[minit.first] = INT64_MIN;
             reverseDone.push_back(std::make_pair(maxit.first, minit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
+            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(),
+                   reverseDone[reverseDone.size() - 1].second);
             reverseDone.push_back(std::make_pair(minit.first, maxit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
+            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(),
+                   reverseDone[reverseDone.size() - 1].second);
+        }
+        if (done.size() % 2) {
+            for (auto& it : done)
+                if (it.second != INT64_MIN) reverseDone.push_back(std::make_pair(it.first, it.second));
         }
         printf("\n");
 
         // now done reverse sorted: kw[64062], sid[63185], lid[52307], bamp[17250],
-        std::sort(reverseDone.begin(), reverseDone.end(), std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1, std::placeholders::_2));  // min-->max
+        std::sort(reverseDone.begin(), reverseDone.end(),
+                  std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1,
+                            std::placeholders::_2));  // min-->max
         printf("now done reverse sorted: ");
         for (auto& d : reverseDone) printf("%s[%lld], ", d.first.c_str(), d.second);
         printf("\n");
@@ -143,7 +157,9 @@ class ThreadPoolManage {
         }
         for (auto& it : threads) {
             if (it.second < funcThMap[it.first].second && overflow > 0) {
-                int v = funcThMap[it.first].second - it.second > overflow ? overflow : funcThMap[it.first].second - it.second;
+                int v = funcThMap[it.first].second - it.second > overflow
+                            ? overflow
+                            : funcThMap[it.first].second - it.second;
                 it.second += v;
                 overflow -= v;
             }

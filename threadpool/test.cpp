@@ -9,9 +9,8 @@
 #include "ThreadPoolManage.h"
 
 using In = int;
-using Out = int;
 
-void bampengin(In& a, Out& b) {
+void bampengin(In& a, int& b, std::string& s) {
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // while (ptr->GePermission(n)) {
     // ptr->GePermission(std::this_thread::get_id());
@@ -22,7 +21,7 @@ void bampengin(In& a, Out& b) {
     // }
 }
 
-void lidengin(In& a, Out& b) {
+void lidengin(In& a, int& b, std::string& s) {
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // while (ptr->GePermission(n)) {
     // ptr->GePermission(std::this_thread::get_id());
@@ -34,7 +33,7 @@ void lidengin(In& a, Out& b) {
     // }
 }
 
-void sidengin(In& a, Out& b) {
+void sidengin(In& a, int& b, std::string& s) {
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // while (ptr->GePermission(n)) {
     // ptr->GePermission(std::this_thread::get_id());
@@ -46,7 +45,7 @@ void sidengin(In& a, Out& b) {
     // }
 }
 
-void kwengin(In& a, Out& b) {
+void kwengin(In& a, int& b, std::string& s) {
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // while (ptr->GePermission(n)) {
     // ptr->GePermission(std::this_thread::get_id());
@@ -77,13 +76,13 @@ int main() {
     quemap["kw"] = new BlockingQueue<In>;
     auto Push4 = new std::thread(pushque, quemap["kw"]);
 
-    int totalThNum = 100, checkInter = 1;
-    std::unordered_map<std::string, std::pair<std::function<void(In&, Out&)>, int>> ftm;
-    ftm["bamp"] = std::make_pair(std::bind(bampengin, std::placeholders::_1, std::placeholders::_2), 50);
-    ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2), 50);
-    ftm["sid"] = std::make_pair(std::bind(sidengin, std::placeholders::_1, std::placeholders::_2), 50);
-    ftm["kw"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2), 50);
-    ThreadPoolManage<In, Out> manage(ftm, quemap, totalThNum, checkInter);
+    int totalThNum = 30, checkInter = 1;
+    std::unordered_map<std::string, std::pair<std::function<void(In&, int&, std::string&)>, int>> ftm;
+    ftm["bamp"] = std::make_pair(std::bind(bampengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["sid"] = std::make_pair(std::bind(sidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["kw"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ThreadPoolManage<In> manage(ftm, quemap, totalThNum, checkInter);
 
     Push1->join();
     delete Push1;

@@ -14,17 +14,20 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
 #include "BlockingQueue.h"
 
-template <typename In, typename Out>
+template <typename In>
 class ThreadPool {
-  public:
-    using Engin = std::function<void(In&, Out&)>;
-    explicit ThreadPool(int threadnum, int maxthreadnum, const Engin enginefunc, BlockingQueue<In>* queue) : donenum(-1), engine(enginefunc), bque(queue) {
+   public:
+    using Engin = std::function<void(In&, int&, std::string&)>;
+    explicit ThreadPool(int threadnum, int maxthreadnum, const Engin enginefunc, BlockingQueue<In>* queue,
+                        std::string name)
+        : donenum(-1), engine(enginefunc), bque(queue) {
         for (int i = 0; i < maxthreadnum; i++) {
             if (i < threadnum)
                 enable[i] = true;
@@ -33,10 +36,12 @@ class ThreadPool {
             // waiting[i] = false;
             encond[i] = new std::condition_variable;
             // wacond[i] = new std::condition_variable;
-            funcVec.push_back(new std::thread(&ThreadPool::run, this, i));
+            funcVec.push_back(new std::thread(&ThreadPool::run, this, i, name));
         }
-        printf("funcVecsize[%lu], enablesize[%lu], encondsize[%lu]\n", funcVec.size(), enable.size(), encond.size());
-        // printf("funcVecsize[%lu], enablesize[%lu], waitingsize[%lu], encondsize[%lu], wacondsize[%lu]\n", funcVec.size(), enable.size(), waiting.size(), encond.size(), wacond.size());
+        printf("funcVecsize[%lu], enablesize[%lu], encondsize[%lu]\n", funcVec.size(), enable.size(),
+               encond.size());
+        // printf("funcVecsize[%lu], enablesize[%lu], waitingsize[%lu], encondsize[%lu], wacondsize[%lu]\n",
+        // funcVec.size(), enable.size(), waiting.size(), encond.size(), wacond.size());
     }
 
     ~ThreadPool() {
@@ -53,15 +58,18 @@ class ThreadPool {
         if (enablenum > 0) {  // add enable
             for (auto& it : enable) {
                 if (!it.second) {  // enable=false, waiting=true
-                    // if (!waiting[it.first]) wacond[it.first]->wait(lock);  // waiting=false, running in last time
-                    encond[it.first]->notify_one();  // notity to the waiting thread, not waiting won't get the notify
+                    // if (!waiting[it.first]) wacond[it.first]->wait(lock);  // waiting=false, running in
+                    // last time
+                    encond[it.first]
+                        ->notify_one();  // notity to the waiting thread, not waiting won't get the notify
                     if (--enablenum == 0) break;
                 }
             }
         } else if (enablenum < 0) {  // decrease enable
             for (auto& it : enable) {
                 if (it.second) {  // enable=true, waiting=true
-                    // if (!waiting[it.first]) wacond[it.first]->wait(lock);  // waiting=false, running in last time
+                    // if (!waiting[it.first]) wacond[it.first]->wait(lock);  // waiting=false, running in
+                    // last time
                     it.second = false;
                     if (++enablenum == 0) break;
                 }
@@ -85,7 +93,7 @@ class ThreadPool {
 
     long long donenum;
 
-  private:
+   private:
     std::vector<std::thread*> funcVec;
     Engin engine;
     std::mutex mtx;
@@ -108,11 +116,11 @@ class ThreadPool {
         return true;
     }
 
-    void run(int n) {
+    void run(int n, std::string name) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         while (this->getPermission(n)) {
             auto data = bque->pop();
-            this->engine(data, n);
+            this->engine(data, n, name);
         }
     }
 };
