@@ -2,7 +2,7 @@
  * @Description: interval change time suggest is one long engine recognition time
  * @Author: Hejun Jiang
  * @Date: 2020-11-09 17:11:54
- * @LastEditTime: 2020-11-12 16:46:03
+ * @LastEditTime: 2020-11-17 10:27:33
  * @LastEditors: Hejun Jiang
  * @Version: v0.0.1
  * @Contact: jianghejun@hccl.ioa.ac.cn
@@ -20,11 +20,10 @@
 
 template <typename In>
 class ThreadPoolManage {
-   public:
+  public:
     using Engin = std::function<void(In&, int&, std::string&)>;
-    explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap,
-                              std::unordered_map<std::string, BlockingQueue<In>*> queuemap,
-                              int totalthreadnum, int changeinterval)
+    explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap, std::unordered_map<std::string, BlockingQueue<In>*> queuemap, int totalthreadnum,
+                              int changeinterval)
         : totalThNum(totalthreadnum), changeInterval(changeinterval), funcThMap(functhreadmap) {
         int averge = totalThNum / funcThMap.size(), dvalue = totalThNum % funcThMap.size(), th;
         for (auto& it : funcThMap) {  // averge maybe > maxthself
@@ -32,8 +31,7 @@ class ThreadPoolManage {
                 th = averge + 1;
             else
                 th = averge;
-            funcMap[it.first] =
-                new ThreadPool<In>(th, it.second.second, it.second.first, queuemap[it.first], it.first);
+            funcMap[it.first] = new ThreadPool<In>(th, it.second.second, it.second.first, queuemap[it.first], it.first);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         printf("GetEnableSize: ");
@@ -51,7 +49,7 @@ class ThreadPoolManage {
         delete ch;
     }
 
-   private:
+  private:
     int totalThNum, changeInterval;
     std::thread* ch;
     std::unordered_map<std::string, std::pair<Engin, int>> funcThMap;
@@ -71,10 +69,8 @@ class ThreadPoolManage {
         }
     }
 
-   private:
-    bool cmp(std::pair<std::string, long long> x, std::pair<std::string, long long> y) {
-        return x.second > y.second;
-    }
+  private:
+    bool cmp(std::pair<std::string, long long> x, std::pair<std::string, long long> y) { return x.second > y.second; }
 
     void ReverseThread() {
         // now done: kw[17250], sid[52307], lid[63185], bamp[64062],
@@ -89,34 +85,31 @@ class ThreadPoolManage {
         printf("\n");
 
         // now done reverse: bamp[17250], kw[64062], lid[52307], sid[63185],
-        printf("now done reverse: ");
+        printf("now done reverse: \n");
         std::vector<std::pair<std::string, long long>> reverseDone;
         for (int n = 0; n < done.size() / 2; n++) {
             long long max = INT64_MIN, min = INT64_MAX;
             std::pair<std::string, long long> maxit, minit;
-            for (auto it : done) {
-                if (it.second > max && it.second != INT64_MIN) max = it.second, maxit = it;
-                if (it.second < min && it.second != INT64_MIN) min = it.second, minit = it;
-            }
+            for (auto& it : done)
+                if (it.second != INT64_MIN && it.second >= max && it.first != minit.first) max = it.second, maxit = it;
+            for (auto& it : done)
+                if (it.second != INT64_MIN && it.second <= min && it.first != maxit.first) min = it.second, minit = it;
             done[maxit.first] = INT64_MIN;
             done[minit.first] = INT64_MIN;
-            reverseDone.push_back(std::make_pair(maxit.first, minit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(),
-                   reverseDone[reverseDone.size() - 1].second);
-            reverseDone.push_back(std::make_pair(minit.first, maxit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(),
-                   reverseDone[reverseDone.size() - 1].second);
+            reverseDone.emplace_back(std::make_pair(maxit.first, minit.second));
+            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
+            reverseDone.emplace_back(std::make_pair(minit.first, maxit.second));
+            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
         }
         if (done.size() % 2) {
             for (auto& it : done)
-                if (it.second != INT64_MIN) reverseDone.push_back(std::make_pair(it.first, it.second));
+                if (it.second != INT64_MIN) reverseDone.emplace_back(std::make_pair(it.first, it.second));
         }
         printf("\n");
 
         // now done reverse sorted: kw[64062], sid[63185], lid[52307], bamp[17250],
-        std::sort(reverseDone.begin(), reverseDone.end(),
-                  std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1,
-                            std::placeholders::_2));  // min-->max
+        std::sort(reverseDone.begin(), reverseDone.end(), std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1,
+                                                                    std::placeholders::_2));  // min-->max
         printf("now done reverse sorted: ");
         for (auto& d : reverseDone) printf("%s[%lld], ", d.first.c_str(), d.second);
         printf("\n");
@@ -126,7 +119,7 @@ class ThreadPoolManage {
         std::vector<std::pair<std::string, double>> rt;
         for (auto& it : reverseDone) {
             auto v = ((double)it.second) / total;
-            rt.push_back(std::make_pair(it.first, v));
+            rt.emplace_back(std::make_pair(it.first, v));
             printf("%s[%.2f], ", it.first.c_str(), v);
         }
         printf("\n");
@@ -139,9 +132,9 @@ class ThreadPoolManage {
             if (it + 1 != rt.end()) {
                 int th = it->second * totalThNum;
                 tmp += th;
-                threads.push_back(std::make_pair(it->first, th));
+                threads.emplace_back(std::make_pair(it->first, th));
             } else
-                threads.push_back(std::make_pair(it->first, totalThNum - tmp));
+                threads.emplace_back(std::make_pair(it->first, totalThNum - tmp));
             printf("%s[%d], ", threads[threads.size() - 1].first.c_str(), threads[threads.size() - 1].second);
         }
         printf("\n");
@@ -157,9 +150,7 @@ class ThreadPoolManage {
         }
         for (auto& it : threads) {
             if (it.second < funcThMap[it.first].second && overflow > 0) {
-                int v = funcThMap[it.first].second - it.second > overflow
-                            ? overflow
-                            : funcThMap[it.first].second - it.second;
+                int v = funcThMap[it.first].second - it.second > overflow ? overflow : funcThMap[it.first].second - it.second;
                 it.second += v;
                 overflow -= v;
             }
