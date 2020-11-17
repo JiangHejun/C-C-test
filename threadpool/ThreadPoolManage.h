@@ -2,7 +2,7 @@
  * @Description: interval change time suggest is one long engine recognition time
  * @Author: Hejun Jiang
  * @Date: 2020-11-09 17:11:54
- * @LastEditTime: 2020-11-17 10:27:33
+ * @LastEditTime: 2020-11-17 14:20:44
  * @LastEditors: Hejun Jiang
  * @Version: v0.0.1
  * @Contact: jianghejun@hccl.ioa.ac.cn
@@ -60,9 +60,14 @@ class ThreadPoolManage {
             std::this_thread::sleep_for(std::chrono::seconds(changeInterval));
             ReverseThread();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            int value = 0;
             printf("GetEnableSize: ");
-            for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetEnableSize());
-            printf("\n\n");
+            for (auto& it : funcMap) {
+                int v = it.second->GetEnableSize();
+                printf("%s[%d], ", it.first.c_str(), v);
+                value += v;
+            }
+            printf("total: %d\n\n", value);
             // printf("GetWorkingSize: ");
             // for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetWorkingSize());
             // printf("\n\n");

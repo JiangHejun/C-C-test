@@ -73,21 +73,29 @@ int main() {
     auto Push2 = new std::thread(pushque, quemap["lid"]);
     quemap["sid"] = new BlockingQueue<In>;
     auto Push3 = new std::thread(pushque, quemap["sid"]);
-    quemap["kw"] = new BlockingQueue<In>;
-    auto Push4 = new std::thread(pushque, quemap["kw"]);
+    quemap["cn"] = new BlockingQueue<In>;
+    auto Push4 = new std::thread(pushque, quemap["cn"]);
+    quemap["arab"] = new BlockingQueue<In>;
+    auto Push5 = new std::thread(pushque, quemap["arab"]);
+    quemap["tur"] = new BlockingQueue<In>;
+    auto Push6 = new std::thread(pushque, quemap["tur"]);
+    quemap["tib"] = new BlockingQueue<In>;
+    auto Push7 = new std::thread(pushque, quemap["tib"]);
+    quemap["uig"] = new BlockingQueue<In>;
+    auto Push8 = new std::thread(pushque, quemap["uig"]);
 
     int totalThNum = 30, checkInter = 1;
     std::unordered_map<std::string, std::pair<std::function<void(In&, int&, std::string&)>, int>> ftm;
     ftm["bamp"] = std::make_pair(std::bind(bampengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
     ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
     ftm["sid"] = std::make_pair(std::bind(sidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["kw"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["cn"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["arab"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["tur"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["tib"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["uig"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
     ThreadPoolManage<In> manage(ftm, quemap, totalThNum, checkInter);
 
     Push1->join();
-    delete Push1;
-    delete Push2;
-    delete Push3;
-    delete Push4;
     return 0;
 }
