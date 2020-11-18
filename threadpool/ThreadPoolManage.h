@@ -2,7 +2,7 @@
  * @Description: interval change time suggest is one long engine recognition time
  * @Author: Hejun Jiang
  * @Date: 2020-11-09 17:11:54
- * @LastEditTime: 2020-11-17 14:20:44
+ * @LastEditTime: 2020-11-18 10:54:26
  * @LastEditors: Hejun Jiang
  * @Version: v0.0.1
  * @Contact: jianghejun@hccl.ioa.ac.cn
@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <string>
+#include <unordered_set>
 
 #include "ThreadPool.h"
 
@@ -78,48 +79,66 @@ class ThreadPoolManage {
     bool cmp(std::pair<std::string, long long> x, std::pair<std::string, long long> y) { return x.second > y.second; }
 
     void ReverseThread() {
-        // now done: kw[17250], sid[52307], lid[63185], bamp[64062],
-        long long total = 0;
+        // now done: bamp[312], lid[90], sid[78], cn[61], arab[61], tur[61], tib[61], uig[61],
         printf("now done: ");
+        std::unordered_set<long long> doneset;  // donenum
         std::unordered_map<std::string, long long> done;
         for (auto& it : funcMap) {
-            done[it.first] = it.second->donenum;
-            total += done[it.first];
+            long long v = it.second->donenum;
+            doneset.insert(v);
+            done[it.first] = v;
             printf("%s[%lld], ", it.first.c_str(), done[it.first]);
         }
         printf("\n");
 
-        // now done reverse: bamp[17250], kw[64062], lid[52307], sid[63185],
-        printf("now done reverse: \n");
+        // done set: 61, 78, 90, 312
+        // tochange: bamp[61], uig[312], tib[312], tur[312], arab[312], cn[312], lid[78], sid[90],
+        printf("now done reverse: ");
         std::vector<std::pair<std::string, long long>> reverseDone;
-        for (int n = 0; n < done.size() / 2; n++) {
+        for (int n = 0; n < doneset.size() / 2; n++) {
             long long max = INT64_MIN, min = INT64_MAX;
-            std::pair<std::string, long long> maxit, minit;
-            for (auto& it : done)
-                if (it.second != INT64_MIN && it.second >= max && it.first != minit.first) max = it.second, maxit = it;
-            for (auto& it : done)
-                if (it.second != INT64_MIN && it.second <= min && it.first != maxit.first) min = it.second, minit = it;
-            done[maxit.first] = INT64_MIN;
-            done[minit.first] = INT64_MIN;
-            reverseDone.emplace_back(std::make_pair(maxit.first, minit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
-            reverseDone.emplace_back(std::make_pair(minit.first, maxit.second));
-            printf("%s[%lld], ", reverseDone[reverseDone.size() - 1].first.c_str(), reverseDone[reverseDone.size() - 1].second);
+            for (auto& it : done) {
+                if (it.second != INT64_MIN && it.second >= max) max = it.second;
+                if (it.second != INT64_MIN && it.second <= min) min = it.second;
+            }
+            std::vector<std::pair<std::string, long long>> maxitvec, minitvec;
+            for (auto& it : done) {
+                if (it.second == max) {
+                    maxitvec.emplace_back(std::make_pair(it.first, min));
+                    it.second = INT64_MIN;
+                }
+                if (it.second == min) {
+                    minitvec.emplace_back(std::make_pair(it.first, max));
+                    it.second = INT64_MIN;
+                }
+            }
+            for (auto& it : maxitvec) {
+                reverseDone.emplace_back(it);
+                printf("%s[%lld], ", reverseDone.back().first.c_str(), reverseDone.back().second);
+            }
+            for (auto& it : minitvec) {
+                reverseDone.emplace_back(it);
+                printf("%s[%lld], ", reverseDone.back().first.c_str(), reverseDone.back().second);
+            }
         }
-        if (done.size() % 2) {
+        if (doneset.size() % 2) {
             for (auto& it : done)
                 if (it.second != INT64_MIN) reverseDone.emplace_back(std::make_pair(it.first, it.second));
         }
         printf("\n");
 
-        // now done reverse sorted: kw[64062], sid[63185], lid[52307], bamp[17250],
+        // now done reverse sorted: uig[312], tib[312], tur[312], arab[312], cn[312], sid[90], lid[78], bamp[61],
         std::sort(reverseDone.begin(), reverseDone.end(), std::bind(&ThreadPoolManage::cmp, this, std::placeholders::_1,
                                                                     std::placeholders::_2));  // min-->max
         printf("now done reverse sorted: ");
-        for (auto& d : reverseDone) printf("%s[%lld], ", d.first.c_str(), d.second);
+        long long total = 0;
+        for (auto& d : reverseDone) {
+            total += d.second;
+            printf("%s[%lld], ", d.first.c_str(), d.second);
+        }
         printf("\n");
 
-        // rate reverse sorted: kw[0.33], sid[0.32], lid[0.27], bamp[0.09],
+        // rate reverse sorted: uig[0.17], tib[0.17], tur[0.17], arab[0.17], cn[0.17], sid[0.05], lid[0.04], bamp[0.03],
         printf("rate reverse sorted: ");
         std::vector<std::pair<std::string, double>> rt;
         for (auto& it : reverseDone) {
@@ -129,38 +148,40 @@ class ThreadPoolManage {
         }
         printf("\n");
 
-        // thread number sorted: kw[32], sid[32], lid[26], bamp[10],
+        // thread number sorted: uig[5], tib[5], tur[5], arab[5], cn[5], sid[1], lid[1], bamp[1], =28 <30
         printf("thread number sorted: ");
         std::vector<std::pair<std::string, int>> threads;
         int tmp = 0;
         for (auto it = rt.begin(); it != rt.end(); it++) {
-            if (it + 1 != rt.end()) {
-                int th = it->second * totalThNum;
-                tmp += th;
-                threads.emplace_back(std::make_pair(it->first, th));
-            } else
-                threads.emplace_back(std::make_pair(it->first, totalThNum - tmp));
-            printf("%s[%d], ", threads[threads.size() - 1].first.c_str(), threads[threads.size() - 1].second);
+            int th = it->second * totalThNum;
+            tmp += th;
+            threads.emplace_back(std::make_pair(it->first, th));
+            printf("%s[%d], ", threads.back().first.c_str(), threads.back().second);
         }
         printf("\n");
 
-        // thread number sorted revised: kw[32], sid[32], lid[26], bamp[10],
-        printf("thread number sorted revised: ");
-        int overflow = 0;
+        // thread number sorted revised: uig[6], tib[6], tur[5], arab[5], cn[5], sid[1], lid[1], bamp[1],
+        int overflow = totalThNum - tmp;
         for (auto& it : threads) {  // 2,8,5,3 --6--> 2,6,6,4
             if (it.second > funcThMap[it.first].second) {
                 overflow += (it.second - funcThMap[it.first].second);
                 it.second = funcThMap[it.first].second;
             }
         }
-        for (auto& it : threads) {
-            if (it.second < funcThMap[it.first].second && overflow > 0) {
-                int v = funcThMap[it.first].second - it.second > overflow ? overflow : funcThMap[it.first].second - it.second;
-                it.second += v;
-                overflow -= v;
+        while (true) {
+            bool isfull = true;
+            for (auto& it : threads) {
+                if (it.second < funcThMap[it.first].second && overflow > 0) {
+                    it.second++;
+                    overflow--;
+                    isfull = false;
+                }
             }
-            printf("%s[%d], ", it.first.c_str(), it.second);
+            if (isfull) break;
         }
+
+        printf("thread number sorted revised: ");
+        for (auto& it : threads) printf("%s[%d], ", it.first.c_str(), it.second);
         printf("\n");
 
         for (auto& it : threads) funcMap[it.first]->ChangeEnable(it.second);

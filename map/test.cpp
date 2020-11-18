@@ -44,27 +44,29 @@ void t3() {
 }
 
 int main() {
-    // std::map<std::string, int> map;
-    // map["jhj"] = 100;
-    // printf("%d\n", map["jhj"]);
-    // map["jhj"] = 99;
-    // printf("%d\n", map["jhj"]);
-    // map["hwq"] = 10;
-    // printf("%d\n", map["hwq"]);
-    // printf("%d\n", map["jjj"]);
-    // printf("%lu\n", map.size());
+    std::map<std::string, int> map;
+    map["jhj"] = 100;
+    printf("%d\n", map["jhj"]);
+    map["jhj"] = 99;
+    printf("%d\n", map["jhj"]);
+    map["hwq"] = 10;
+    printf("%d\n", map["hwq"]);
+    printf("%d\n", map["jjj"]);
+    printf("%lu\n", map.size());
+    map.erase("iiiiiii");
+    printf("%lu\n", map.size());
 
-    m["test1"] = std::vector<std::string>();
-    m["test2"] = std::vector<std::string>();
-    m["test3"] = std::vector<std::string>();
-    mtx["test1"] = new std::mutex;
-    mtx["test2"] = new std::mutex;
-    mtx["test3"] = new std::mutex;
+    // m["test1"] = std::vector<std::string>();
+    // m["test2"] = std::vector<std::string>();
+    // m["test3"] = std::vector<std::string>();
+    // mtx["test1"] = new std::mutex;
+    // mtx["test2"] = new std::mutex;
+    // mtx["test3"] = new std::mutex;
 
-    auto p1 = new std::thread(t1);
-    auto p2 = new std::thread(t2);
-    auto p3 = new std::thread(t3);
+    // auto p1 = new std::thread(t1);
+    // auto p2 = new std::thread(t2);
+    // auto p3 = new std::thread(t3);
 
-    p1->join();
+    // p1->join();
     return 0;
 }
