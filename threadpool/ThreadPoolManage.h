@@ -2,7 +2,7 @@
  * @Description: interval change time suggest is one long engine recognition time
  * @Author: Hejun Jiang
  * @Date: 2020-11-09 17:11:54
- * @LastEditTime: 2020-11-18 10:54:26
+ * @LastEditTime: 2020-12-04 09:51:32
  * @LastEditors: Hejun Jiang
  * @Version: v0.0.1
  * @Contact: jianghejun@hccl.ioa.ac.cn
@@ -95,7 +95,7 @@ class ThreadPoolManage {
         // tochange: bamp[61], uig[312], tib[312], tur[312], arab[312], cn[312], lid[78], sid[90],
         printf("now done reverse: ");
         std::vector<std::pair<std::string, long long>> reverseDone;
-        for (int n = 0; n < doneset.size() / 2; n++) {
+        for (size_t n = 0; n < doneset.size() / 2; n++) {
             long long max = INT64_MIN, min = INT64_MAX;
             for (auto& it : done) {
                 if (it.second != INT64_MIN && it.second >= max) max = it.second;

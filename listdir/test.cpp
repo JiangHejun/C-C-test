@@ -1,5 +1,6 @@
-#include <dirent.h>    //opendir readdir closedir
-#include <stdio.h>     //printf
+#include <dirent.h>  //opendir readdir closedir
+#include <stdio.h>   //printf
+#include <string.h>
 #include <sys/stat.h>  // stat
 #include <time.h>
 #include <unistd.h>  // chdir
@@ -51,7 +52,8 @@ int GetOneDirFiles(const char* dir_name, std::vector<std::string>& files) {
     return closedir(dir);
 }
 
-int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth = -1) {
+// "*" is all files, "" is no extsion files
+int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth = -1, std::string extension = "*") {
     if (depth == 0)
         return 0;
     else if (depth > 0)
@@ -63,24 +65,37 @@ int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth
 
     struct dirent* p_entry;
     struct stat statbuf;
-    while (p_entry = readdir(p_dir)) {
+    while ((p_entry = readdir(p_dir))) {
         if (std::string(p_entry->d_name) == "." || std::string(p_entry->d_name) == "..") continue;
-        std::string path(std::string(dir_name) + "/" + std::string(p_entry->d_name));
+        std::string sym = (*(--std::string(dir_name).end())) == '/' ? "" : "/";
+        std::string path(std::string(dir_name) + sym + std::string(p_entry->d_name));
         lstat(path.c_str(), &statbuf);  // 获取下一级成员属性,链接的返回链接属性，stat 返回的时链接真是文件的属性
         if (depth < 0 || depth >= 0) {
-            if (S_ISDIR(statbuf.st_mode)) {               // 判断下一级成员是否是目录
-                GetDirFiles(path.c_str(), files, depth);  // 扫描下一级目录的内容
-            } else if (S_ISREG(statbuf.st_mode)) {
-                files.push_back(path);
+            if (S_ISDIR(statbuf.st_mode)) {  // 判断下一级成员是否是目录
+                int rlt = GetDirFiles(path.c_str(), files, depth, extension);
+                if (rlt < 0) return rlt;
+            }  // 扫描下一级目录的内容
+            else if (S_ISREG(statbuf.st_mode)) {
+                if (extension != "*") {
+                    const char* ret = strrchr(p_entry->d_name, '.');
+                    if (ret) {  // have ext
+                        if (std::string(ret) != extension) continue;
+                    } else if (extension != "")  // have noext and extension not is ""
+                        continue;
+
+                    if (ret && std::string(ret) != extension) continue;
+                }
+                files.emplace_back(path);
             }
         }
     }
     closedir(p_dir);
+    return 0;
 }
 
 int main() {
     int rec;
-    const char* dir = "/data/AudioDetection/hit/AudioAnalysisEngine/Detection";
+    const char* dir = ".";
     // const char* dir = "./vscode/";
     std::vector<std::string> filesV;
 

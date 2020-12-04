@@ -1,16 +1,27 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <string>
 
 #include <iostream>
+#include <string>
 
-std::string GetCwd(){
-    char dir[255];
-    getcwd(dir, sizeof(dir));
-    return std::string(dir);
+std::string GetCwd(const char* path = NULL) {
+    char dir[4096];
+    if (path == NULL) {
+        if (getcwd(dir, sizeof(dir)) == NULL) {
+            perror("GetCwd getcwd");
+            return "./";
+        }
+    } else {
+        if (realpath(path, dir) == NULL) {
+            perror("GetCwd realpath");
+            return path;
+        }
+    }
+    return dir;
 }
 
 int main() {
     std::cout << GetCwd() << std::endl;
+    std::cout << GetCwd("./.v") << std::endl;
     return 0;
 }

@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 using namespace std;
 
@@ -42,39 +44,31 @@ void recursion_scan_dir_file(const char* dir, int depth) {
 }
 
 //列出一个目录下所有文件
-void scan_one_dir(const char* dir_name) {
-    if (NULL == dir_name) {
-        cout << " dir_name is null ! " << endl;
-        return;
-    }
+std::vector<std::string> GetFilesInDir(const char* dir_name) {
+    std::vector<std::string> files;
+    if (NULL == dir_name) return files;
 
     struct stat s;
     lstat(dir_name, &s);
-    if (!S_ISDIR(s.st_mode)) {
-        return;
-    }
+    if (!S_ISDIR(s.st_mode)) return files;
 
     struct dirent* filename;
     DIR* dir;
     dir = opendir(dir_name);
-    if (NULL == dir) {
-        return;
-    }
+    if (NULL == dir) return files;
 
-    int iName = 0;
     while ((filename = readdir(dir)) != NULL) {
         if (strcmp(filename->d_name, ".") == 0 || strcmp(filename->d_name, "..") == 0) continue;
-
-        char wholePath[128] = {0};
-        sprintf(wholePath, "%s/%s", dir_name, filename->d_name);
-
-        cout << "wholePath= " << wholePath << endl;
+        files.emplace_back(std::string(dir_name) + "/" + std::string(filename->d_name));
     }
 }
 
 main(int argc, char* argv[]) {
-    const char* path = "/data/AudioDetection/hit/AudioAnalysisEngine";
-    // scan_one_dir(path);
-    recursion_scan_dir_file(path, 1);  // depth 是指空格数，不是遍历深度
+    const char* path = "./";
+    auto v = GetFilesInDir(path);
+    // recursion_scan_dir_file(path, 1);  // depth 是指空格数，不是遍历深度
+    for (auto f : v) {
+        printf("%s\n", f.c_str());
+    }
     return 0;
 }
