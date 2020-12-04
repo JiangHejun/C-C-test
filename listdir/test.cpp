@@ -52,8 +52,24 @@ int GetOneDirFiles(const char* dir_name, std::vector<std::string>& files) {
     return closedir(dir);
 }
 
+std::string GetCwd(const char* path = NULL) {
+    char dir[4096];
+    if (path == NULL) {
+        if (getcwd(dir, sizeof(dir)) == NULL) {
+            perror("GetCwd getcwd");
+            return "./";
+        }
+    } else {
+        if (realpath(path, dir) == NULL) {
+            perror("GetCwd realpath");
+            return path;
+        }
+    }
+    return dir;
+}
+
 // "*" is all files, "" is no extsion files
-int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth = -1, std::string extension = "*") {
+int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth = -1, std::string extension = "*", bool abspath = true) {
     if (depth == 0)
         return 0;
     else if (depth > 0)
@@ -85,7 +101,7 @@ int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth
 
                     if (ret && std::string(ret) != extension) continue;
                 }
-                files.emplace_back(path);
+                files.emplace_back(abspath ? GetCwd(path.c_str()) : path);
             }
         }
     }
@@ -110,6 +126,7 @@ int main() {
 
     filesV.clear();
     rec = GetDirFiles(dir, filesV);
+    // rec = GetDirFiles(dir, filesV, -1, "*", false);
     if (rec < 0) {
         fprintf(stderr, "GetDirFiles error, %d\n", rec);
         return -1;

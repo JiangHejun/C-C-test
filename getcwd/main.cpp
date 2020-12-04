@@ -22,6 +22,8 @@ std::string GetCwd(const char* path = NULL) {
 
 int main() {
     std::cout << GetCwd() << std::endl;
-    std::cout << GetCwd("./.v") << std::endl;
+    std::cout << GetCwd("./") << std::endl;
+    std::cout << GetCwd("./main") << std::endl;
+    std::cout << GetCwd("./main.cpp") << std::endl;
     return 0;
 }
