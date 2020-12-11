@@ -69,15 +69,12 @@ std::string GetCwd(const char* path = NULL) {
 }
 
 // "*" is all files, "" is no extsion files
-int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth = -1, std::string extension = "*", bool abspath = true) {
-    if (depth == 0)
-        return 0;
-    else if (depth > 0)
-        --depth;
-    if (!dir_name) return -1;
+int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth = 0, std::string extension = "*", bool abspath = true) {
+    if (depth < 0) return -1;
+    if (!dir_name) return -2;
 
     auto p_dir = opendir(dir_name);
-    if (!p_dir) return -2;
+    if (!p_dir) return -3;
 
     struct dirent* p_entry;
     struct stat statbuf;
@@ -85,24 +82,22 @@ int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth
         if (std::string(p_entry->d_name) == "." || std::string(p_entry->d_name) == "..") continue;
         std::string sym = (*(--std::string(dir_name).end())) == '/' ? "" : "/";
         std::string path(std::string(dir_name) + sym + std::string(p_entry->d_name));
-        lstat(path.c_str(), &statbuf);  // 获取下一级成员属性,链接的返回链接属性，stat 返回的时链接真是文件的属性
-        if (depth < 0 || depth >= 0) {
-            if (S_ISDIR(statbuf.st_mode)) {  // 判断下一级成员是否是目录
-                int rlt = GetDirFiles(path.c_str(), files, depth, extension);
-                if (rlt < 0) return rlt;
-            }  // 扫描下一级目录的内容
-            else if (S_ISREG(statbuf.st_mode)) {
-                if (extension != "*") {
-                    const char* ret = strrchr(p_entry->d_name, '.');
-                    if (ret) {  // have ext
-                        if (std::string(ret) != extension) continue;
-                    } else if (extension != "")  // have noext and extension not is ""
-                        continue;
+        lstat(path.c_str(), &statbuf);                 // 获取下一级成员属性,链接的返回链接属性，stat 返回的时链接真是文件的属性
+        if (S_ISDIR(statbuf.st_mode) && depth != 1) {  // 判断下一级成员是否是目录, ==1禁止
+            int rlt = GetDirFiles(path.c_str(), files, depth == 0 ? 0 : depth - 1, extension);
+            if (rlt < 0) return rlt;
+        }  // 扫描下一级目录的内容
+        else if (S_ISREG(statbuf.st_mode)) {
+            if (extension != "*") {
+                const char* ret = strrchr(p_entry->d_name, '.');
+                if (ret) {  // have ext
+                    if (std::string(ret) != extension) continue;
+                } else if (extension != "")  // have noext and extension not is ""
+                    continue;
 
-                    if (ret && std::string(ret) != extension) continue;
-                }
-                files.emplace_back(abspath ? GetCwd(path.c_str()) : path);
+                if (ret && std::string(ret) != extension) continue;
             }
+            files.emplace_back(abspath ? GetCwd(path.c_str()) : path);
         }
     }
     closedir(p_dir);
@@ -111,7 +106,8 @@ int GetDirFiles(const char* dir_name, std::vector<std::string>& files, int depth
 
 int main() {
     int rec;
-    const char* dir = ".";
+    const char* dir = "./tmp";
+    // const char* dir = "/data/docs/";
     // const char* dir = "./vscode/";
     std::vector<std::string> filesV;
 
@@ -125,7 +121,7 @@ int main() {
     // }
 
     filesV.clear();
-    rec = GetDirFiles(dir, filesV);
+    rec = GetDirFiles(dir, filesV, 3);
     // rec = GetDirFiles(dir, filesV, -1, "*", false);
     if (rec < 0) {
         fprintf(stderr, "GetDirFiles error, %d\n", rec);
@@ -148,6 +144,6 @@ int main() {
     // auto s = name.substr(2, 10);  // x
     // printf("%s\n", s.c_str());
 
-    printf("%lld\n", time(NULL));
+    // printf("%lld\n", time(NULL));
     return 0;
 }
