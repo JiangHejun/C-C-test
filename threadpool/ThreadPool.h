@@ -23,11 +23,9 @@
 
 template <typename In>
 class ThreadPool {
-   public:
+  public:
     using Engin = std::function<void(In&, int&, std::string&)>;
-    explicit ThreadPool(int threadnum, int maxthreadnum, const Engin enginefunc, BlockingQueue<In>* queue,
-                        std::string name)
-        : donenum(-1), engine(enginefunc), bque(queue) {
+    explicit ThreadPool(int threadnum, int maxthreadnum, const Engin enginefunc, BlockingQueue<In>* queue, std::string name) : donenum(-1), engine(enginefunc), bque(queue) {
         for (int i = 0; i < maxthreadnum; i++) {
             if (i < threadnum)
                 enable[i] = true;
@@ -38,8 +36,7 @@ class ThreadPool {
             // wacond[i] = new std::condition_variable;
             funcVec.push_back(new std::thread(&ThreadPool::run, this, i, name));
         }
-        printf("funcVecsize[%lu], enablesize[%lu], encondsize[%lu]\n", funcVec.size(), enable.size(),
-               encond.size());
+        printf("funcVecsize[%lu], enablesize[%lu], encondsize[%lu]\n", funcVec.size(), enable.size(), encond.size());
         // printf("funcVecsize[%lu], enablesize[%lu], waitingsize[%lu], encondsize[%lu], wacondsize[%lu]\n",
         // funcVec.size(), enable.size(), waiting.size(), encond.size(), wacond.size());
     }
@@ -60,8 +57,7 @@ class ThreadPool {
                 if (!it.second) {  // enable=false, waiting=true
                     // if (!waiting[it.first]) wacond[it.first]->wait(lock);  // waiting=false, running in
                     // last time
-                    encond[it.first]
-                        ->notify_one();  // notity to the waiting thread, not waiting won't get the notify
+                    encond[it.first]->notify_one();  // notity to the waiting thread, not waiting won't get the notify
                     if (--enablenum == 0) break;
                 }
             }
@@ -93,7 +89,7 @@ class ThreadPool {
 
     long long donenum;
 
-   private:
+  private:
     std::vector<std::thread*> funcVec;
     Engin engine;
     std::mutex mtx;

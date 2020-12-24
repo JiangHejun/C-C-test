@@ -84,10 +84,10 @@ int main() {
     quemap["uig"] = new BlockingQueue<In>;
     auto Push8 = new std::thread(pushque, quemap["uig"]);
 
-    int totalThNum = 30, checkInter = 1;
+    int totalThNum = 30, checkInter = 10;
     std::unordered_map<std::string, std::pair<std::function<void(In&, int&, std::string&)>, int>> ftm;
     ftm["bamp"] = std::make_pair(std::bind(bampengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 1);
     ftm["sid"] = std::make_pair(std::bind(sidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
     ftm["cn"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
     ftm["arab"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
