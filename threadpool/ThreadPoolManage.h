@@ -2,7 +2,7 @@
  * @Description: interval change time suggest is one long engine recognition time
  * @Author: Hejun Jiang
  * @Date: 2020-11-09 17:11:54
- * @LastEditTime: 2020-12-24 11:44:56
+ * @LastEditTime: 2021-02-26 15:48:30
  * @LastEditors: Hejun Jiang
  * @Version: v0.0.1
  * @Contact: jianghejun@hccl.ioa.ac.cn
@@ -25,15 +25,30 @@ class ThreadPoolManage {
     using Engin = std::function<void(In&, int&, std::string&)>;
     explicit ThreadPoolManage(std::unordered_map<std::string, std::pair<Engin, int>> functhreadmap, std::unordered_map<std::string, BlockingQueue<In>*> queuemap, int totalthreadnum,
                               int changeinterval)
-        : totalThNum(totalthreadnum), changeInterval(changeinterval), funcThMap(functhreadmap) {
-        int averge = totalThNum / funcThMap.size(), dvalue = totalThNum % funcThMap.size(), th;
-        for (auto& it : funcThMap) {  // averge maybe > maxthself
-            if (dvalue-- > 0)
-                th = averge + 1;
-            else
-                th = averge;
-            funcMap[it.first] = new ThreadPool<In>(th, it.second.second, it.second.first, queuemap[it.first], it.first);
+        : funcThMap(functhreadmap), totalThNum(totalthreadnum), changeInterval(changeinterval) {
+        if (totalThNum < funcThMap.size()) {
+            printf("total thread number should more than open engines number\n");
+            exit(-1);
         }
+        int averge = totalThNum / funcThMap.size(), dvalue = totalThNum % funcThMap.size(), th;
+        std::unordered_map<std::string, int> threads;
+        std::unordered_set<std::string> rlt;
+        for (auto& it : funcThMap) threads[it.first] = averge;
+        while (rlt.size() < threads.size()) {
+            for (auto& it : threads) {
+                if (it.second >= funcThMap[it.first].second) {  // overflow or =
+                    dvalue += it.second - funcThMap[it.first].second;
+                    it.second = funcThMap[it.first].second;
+                    rlt.insert(it.first);
+                } else if (dvalue > 0) {  // dvalue
+                    it.second++;
+                    dvalue--;
+                } else if (dvalue <= 0)
+                    rlt.insert(it.first);
+            }
+        }
+        for (auto& it : threads) funcMap[it.first] = new ThreadPool<In>(it.second, funcThMap[it.first].second, queuemap[it.first], funcThMap[it.first].first, it.first);
+
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         int value = 0;
         printf("GetEnableSize: ");
@@ -47,24 +62,26 @@ class ThreadPoolManage {
         // for (auto& it : funcMap) printf("%s[%d], ", it.first.c_str(), it.second->GetWorkingSize());
         // printf("\n\n");
 
-        ch = new std::thread(&ThreadPoolManage::change, this);
+        if (changeInterval > 0) ch = new std::thread(&ThreadPoolManage::change, this);
     }
 
     ~ThreadPoolManage() {
         for (auto& it : funcMap) delete it.second;
-        delete ch;
+        if (changeInterval > 0) delete ch;
     }
 
   private:
-    int totalThNum, changeInterval;
-    std::thread* ch;
     std::unordered_map<std::string, std::pair<Engin, int>> funcThMap;
-    std::unordered_map<std::string, ThreadPool<In>*> funcMap;
+    int totalThNum;
+    int changeInterval;
+    std::thread* ch;
+    std::unordered_map<std::string, ThreadPool<In>*> funcMap;  // name-thread
 
     void change() {
         while (true) {
             std::this_thread::sleep_for(std::chrono::seconds(changeInterval));
-            ReverseThread();
+            ReverseThreadAvg();
+            // ReverseThreadNum();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             int value = 0;
             printf("GetEnableSize: ");
@@ -83,13 +100,84 @@ class ThreadPoolManage {
   private:
     bool cmp(std::pair<std::string, long long> x, std::pair<std::string, long long> y) { return x.second > y.second; }
 
-    void ReverseThread() {
+    void ReverseThreadAvg() {
+        int nowTNum = totalThNum;
+        std::unordered_map<std::string, long long> done;
+        long long donet = 0;
+        printf("now done: ");
+        for (auto& it : funcMap) {
+            std::unique_lock<std::mutex> numlock(it.second->nummtx);
+            if (it.second->bque->empty()) {
+                it.second->ChangeEnable(1);
+                nowTNum--;
+                printf("%s[%lld], ", it.first.c_str(), it.second->donenum);
+                it.second->donenum = 0;  // clear 0
+                continue;
+            }
+            done[it.first] = it.second->donenum ? it.second->donenum : 1;  // it.second->donenum!=0
+            donet += done[it.first];
+            it.second->donenum = 0;  // clear 0
+            printf("%s[%lld], ", it.first.c_str(), done[it.first]);
+        }
+        printf("\n");
+
+        double doneavg = (double)donet / done.size(), totalrate = 0;
+        std::unordered_map<std::string, double> donerate;
+        for (auto& it : done) {
+            donerate[it.first] = doneavg / it.second * funcMap[it.first]->GetEnableSize();
+            totalrate += donerate[it.first];
+        }
+        printf("the avg donerate: ");
+        for (auto& it : donerate) printf("%s[%.2f], ", it.first.c_str(), it.second);
+        printf("\n");
+
+        std::unordered_map<std::string, int> threads;
+        int total = 0;
+        for (auto& it : donerate) {
+            threads[it.first] = it.second / totalrate * nowTNum ? it.second / totalrate * nowTNum : 1;  // can not =0
+            total += threads[it.first];
+        }
+        printf("the avg threads: ");
+        for (auto& it : threads) printf("%s[%d], ", it.first.c_str(), it.second);
+        printf("\n");
+
+        int overflow = nowTNum - total;  // may>0, may<0
+        for (auto& it : threads) {       // 2,8,5,3 --6--> 2,6,6,4
+            if (it.second > funcThMap[it.first].second) {
+                overflow += (it.second - funcThMap[it.first].second);
+                it.second = funcThMap[it.first].second;
+            }
+        }
+        while (true) {  // for more times
+            bool isfull = true;
+            for (auto& it : threads) {
+                if (overflow > 0 && it.second < funcThMap[it.first].second) {
+                    it.second++;
+                    overflow--;
+                    isfull = false;
+                } else if (overflow < 0 && it.second > 1) {  // it.second at least =1
+                    it.second--;
+                    overflow++;
+                    isfull = false;
+                }
+            }
+            if (isfull) break;
+        }
+        printf("the avg threads done: ");
+        for (auto& it : threads) printf("%s[%d], ", it.first.c_str(), it.second);
+        printf("\n");
+
+        for (auto& it : threads) funcMap[it.first]->ChangeEnable(it.second);
+    }
+
+    void ReverseThreadNum() {
         // now done: bamp[312], lid[90], sid[78], cn[61], arab[61], tur[61], tib[61], uig[61],
         printf("now done: ");
         std::unordered_set<long long> doneset;  // donenum
         std::unordered_map<std::string, long long> done;
         for (auto& it : funcMap) {
-            long long v = it.second->donenum;
+            long long v = it.second->donenum ? it.second->donenum : 1;  // it.second->donenum!=0
+            it.second->donenum = 0;                                     // clear 0
             doneset.insert(v);
             done[it.first] = v;
             printf("%s[%lld], ", it.first.c_str(), done[it.first]);

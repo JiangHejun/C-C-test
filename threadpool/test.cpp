@@ -57,10 +57,11 @@ void kwengin(In& a, int& b, std::string& s) {
     // }
 }
 
-void pushque(BlockingQueue<In>* bque) {
+void pushque(std::string name, BlockingQueue<In>* bque) {
     int i = 0;
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (i >= 1000) std::this_thread::sleep_for(std::chrono::seconds(20)), i = 0;
         bque->push(i++);
     }
 }
@@ -68,32 +69,32 @@ void pushque(BlockingQueue<In>* bque) {
 int main() {
     std::unordered_map<std::string, BlockingQueue<In>*> quemap;
     quemap["bamp"] = new BlockingQueue<In>;
-    auto Push1 = new std::thread(pushque, quemap["bamp"]);
+    auto Push1 = new std::thread(pushque, "bamp", quemap["bamp"]);
     quemap["lid"] = new BlockingQueue<In>;
-    auto Push2 = new std::thread(pushque, quemap["lid"]);
+    auto Push2 = new std::thread(pushque, "lid", quemap["lid"]);
     quemap["sid"] = new BlockingQueue<In>;
-    auto Push3 = new std::thread(pushque, quemap["sid"]);
-    quemap["cn"] = new BlockingQueue<In>;
-    auto Push4 = new std::thread(pushque, quemap["cn"]);
-    quemap["arab"] = new BlockingQueue<In>;
-    auto Push5 = new std::thread(pushque, quemap["arab"]);
-    quemap["tur"] = new BlockingQueue<In>;
-    auto Push6 = new std::thread(pushque, quemap["tur"]);
-    quemap["tib"] = new BlockingQueue<In>;
-    auto Push7 = new std::thread(pushque, quemap["tib"]);
-    quemap["uig"] = new BlockingQueue<In>;
-    auto Push8 = new std::thread(pushque, quemap["uig"]);
+    auto Push3 = new std::thread(pushque, "sid", quemap["sid"]);
+    // quemap["cn"] = new BlockingQueue<In>;
+    // auto Push4 = new std::thread(pushque, quemap["cn"]);
+    // quemap["arab"] = new BlockingQueue<In>;
+    // auto Push5 = new std::thread(pushque, quemap["arab"]);
+    // quemap["tur"] = new BlockingQueue<In>;
+    // auto Push6 = new std::thread(pushque, quemap["tur"]);
+    // quemap["tib"] = new BlockingQueue<In>;
+    // auto Push7 = new std::thread(pushque, quemap["tib"]);
+    // quemap["uig"] = new BlockingQueue<In>;
+    // auto Push8 = new std::thread(pushque, quemap["uig"]);
 
-    int totalThNum = 30, checkInter = 10;
+    int totalThNum = 100, checkInter = 10;
     std::unordered_map<std::string, std::pair<std::function<void(In&, int&, std::string&)>, int>> ftm;
     ftm["bamp"] = std::make_pair(std::bind(bampengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 1);
+    ftm["lid"] = std::make_pair(std::bind(lidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 5);
     ftm["sid"] = std::make_pair(std::bind(sidengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["cn"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["arab"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["tur"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["tib"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
-    ftm["uig"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    // ftm["cn"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    // ftm["arab"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    // ftm["tur"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    // ftm["tib"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
+    // ftm["uig"] = std::make_pair(std::bind(kwengin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), 30);
     ThreadPoolManage<In> manage(ftm, quemap, totalThNum, checkInter);
 
     Push1->join();
